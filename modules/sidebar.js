@@ -25,6 +25,11 @@ export function initSidebar({ onFileSelected } = {}) {
     sidebar.classList.toggle('collapsed');
     const isCollapsed = sidebar.classList.contains('collapsed');
     toggleBtn.title = isCollapsed ? 'Open File List' : 'Collapse File List';
+    const evt = new CustomEvent('sidebar-toggle', {
+      bubbles: true,
+      detail: { collapsed: isCollapsed }
+    });
+    sidebar.dispatchEvent(evt);
   });
 
   editBtn.addEventListener('click', () => {
@@ -51,25 +56,15 @@ export function initSidebar({ onFileSelected } = {}) {
       if (filter && !file.name.toLowerCase().includes(filter)) return;
 
       const li = document.createElement('li');
-      li.style.padding = '3px 0';
-      li.style.cursor = 'pointer';
-      li.style.display = 'flex';
-      li.style.alignItems = 'center';
-      li.style.justifyContent = 'space-between';     
-      li.style.flexWrap = 'nowrap';      
+      li.className = 'sidebar-item';
   
       const nameWithoutExt = file.name.replace(/\.wav$/i, '');
 
       const left = document.createElement('span');
-      left.style.display = 'flex';
-      left.style.alignItems = 'center';
-      left.style.flexGrow = '1';
-      left.style.minWidth = '0';
-      left.style.minHeight = '20px';
+      left.className = 'sidebar-left';
       
       const icon = document.createElement('i');
-      icon.className = 'fa-regular fa-file-audio';
-      icon.style.marginRight = '6px';
+      icon.className = 'fa-regular fa-file-audio sidebar-file-icon';
       left.appendChild(icon);
   
       const textSpan = document.createElement('span');
@@ -80,22 +75,15 @@ export function initSidebar({ onFileSelected } = {}) {
       li.appendChild(left);
 
       const rightContainer = document.createElement('span');
-      rightContainer.style.display = 'flex';
-      rightContainer.style.alignItems = 'center';
-      rightContainer.style.flexShrink = '0';
-      rightContainer.style.whiteSpace = 'nowrap';
+      rightContainer.className = 'sidebar-right';
 
       const flags = document.createElement('span');
-      flags.style.display = 'flex';
-      flags.style.flexShrink = '0';
-      flags.style.whiteSpace = 'nowrap';
+      flags.className = 'sidebar-flags';
 
       const state = getFileIconState(index);
 
       const d = document.createElement('i');
-      d.className = 'fa-solid fa-trash';
-      d.style.marginLeft = '4px';
-      d.style.cursor = 'pointer';
+      d.className = 'fa-solid fa-trash flag-icon';
       d.title = 'Mark as Trash (Delete)';
       const dActive = 'gray';
       d.style.color = state.trash ? dActive : '#ccc';
@@ -113,9 +101,7 @@ export function initSidebar({ onFileSelected } = {}) {
       flags.appendChild(d);
 
       const s = document.createElement('i');
-      s.className = 'fa-solid fa-star';
-      s.style.marginLeft = '4px';
-      s.style.cursor = 'pointer';
+      s.className = 'fa-solid fa-star flag-icon';
       s.title = 'Mark as Star ( * button)';
       const sActive = '#FFD700';
       s.style.color = state.star ? sActive : '#ccc';
@@ -133,9 +119,7 @@ export function initSidebar({ onFileSelected } = {}) {
       flags.appendChild(s);
 
       const q = document.createElement('i');
-      q.className = 'fa-solid fa-question';
-      q.style.marginLeft = '4px';
-      q.style.cursor = 'pointer';
+      q.className = 'fa-solid fa-question flag-icon';
       q.title = 'Mark as Question ( ? button)';
       const qActive = 'red';
       q.style.color = state.question ? qActive : '#ccc';
@@ -165,8 +149,8 @@ export function initSidebar({ onFileSelected } = {}) {
       rightContainer.appendChild(noteInput);
 
       li.appendChild(rightContainer);
-  
-      li.addEventListener('click', () => {
+
+      left.addEventListener('click', () => {
         if (typeof onFileSelected === 'function') {
           onFileSelected(index);
         }

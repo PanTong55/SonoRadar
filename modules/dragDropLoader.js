@@ -24,7 +24,7 @@ export function initDragDropLoader({
   const uploadProgressText = document.getElementById('upload-progress-text');
   const fileNameElem = document.getElementById('fileNameText');
   const guanoOutput = document.getElementById('guano-output');
-  const spectrogramSettings = document.getElementById('spectrogram-settings');  
+  const spectrogramSettingsText = document.getElementById('spectrogram-settings-text');
   let lastObjectUrl = null;
 
   function showOverlay() {
@@ -100,10 +100,7 @@ export function initDragDropLoader({
       await onSampleRateDetected(sampleRate);
     }
 
-    if (spectrogramSettings) {
-      spectrogramSettings.textContent =
-        `Sampling rate: ${sampleRate / 1000}kHz`;
-    }
+
 
     if (typeof onAfterLoad === 'function') {
       onAfterLoad();
@@ -136,17 +133,21 @@ export function initDragDropLoader({
     }
 
     let skippedLong = 0;
+    let skippedSmall = 0;
     const sortedList = validFiles.sort((a, b) => a.name.localeCompare(b.name));
     const filteredList = [];
     const metaList = [];
     for (let i = 0; i < sortedList.length; i++) {
-      const dur = await getWavDuration(sortedList[i]);
-      if (dur > 20) {
+      const fileItem = sortedList[i];
+      const dur = await getWavDuration(fileItem);
+      if (fileItem.size < 200 * 1024) {
+        skippedSmall++;
+      } else if (dur > 20) {
         skippedLong++;
       } else {
-        filteredList.push(sortedList[i]);
+        filteredList.push(fileItem);
         try {
-          const txt = await extractGuanoMetadata(sortedList[i]);
+          const txt = await extractGuanoMetadata(fileItem);
           metaList.push(parseGuanoMetadata(txt));
         } catch (err) {
           metaList.push({ date: '', time: '', latitude: '', longitude: '' });
@@ -177,17 +178,29 @@ export function initDragDropLoader({
         message: `.wav files longer than 20 seconds are not supported and a total of (${skippedLong}) such files were skipped during the loading process. Please trim or preprocess these files to meet the duration requirement before loading.`
       });
     }
+    if (skippedSmall > 0) {
+      showMessageBox({
+        title: 'Warning',
+        message: `${skippedSmall} wav files were skipped due to small file size (<200kb).`
+      });
+    }
   }
 
   let dragCounter = 0;
 
+  function isFileDrag(e) {
+    return Array.from(e.dataTransfer?.types || []).includes('Files');
+  }
+
   dropArea.addEventListener('dragenter', e => {
+    if (!isFileDrag(e)) return;
     e.preventDefault();
     dragCounter++;
     showOverlay();
   });
 
   dropArea.addEventListener('dragleave', e => {
+    if (!isFileDrag(e)) return;
     e.preventDefault();
     dragCounter--;
     if (dragCounter === 0) {
@@ -196,6 +209,7 @@ export function initDragDropLoader({
   });
 
   dropArea.addEventListener('dragover', e => {
+    if (!isFileDrag(e)) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
   });
@@ -239,6 +253,7 @@ export function initDragDropLoader({
   }
 
   dropArea.addEventListener('drop', async e => {
+    if (!isFileDrag(e)) return;
     e.preventDefault();
     dragCounter = 0;
     hideOverlay();
